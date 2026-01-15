@@ -8,46 +8,62 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --brand-color: #3a4a3a; --bg-color: #f9f7f2; }
-        body { font-family: "PingFang TC", sans-serif; background-color: var(--bg-color); color: var(--brand-color); display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: white; padding: 40px 25px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border-top: 6px solid var(--brand-color); text-align: center; }
-        .brand-logo { width: 120px; margin: 0 auto 20px auto; display: block; }
-        .points-box { background: #f4f4f4; padding: 30px; margin: 20px 0; border-radius: 8px; }
-        .points-num { font-size: 56px; font-weight: bold; line-height: 1; }
-        .btn { background: var(--brand-color); color: white; border: none; padding: 16px; width: 100%; font-size: 16px; letter-spacing: 2px; cursor: pointer; transition: 0.3s; margin-top: 12px; font-weight: bold; }
+        body { font-family: "PingFang TC", "STHeitiTC-Light", "Microsoft JhengHei", sans-serif; background-color: var(--bg-color); color: var(--brand-color); display: flex; justify-content: center; padding: 20px; margin: 0; -webkit-font-smoothing: antialiased; }
+        .container { background: white; padding: 50px 25px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 400px; border-top: 6px solid var(--brand-color); text-align: center; }
+        
+        /* Logo 與 文青標語 */
+        .brand-logo { width: 110px; margin: 0 auto 15px auto; display: block; }
+        .brand-slogan { font-size: 16px; letter-spacing: 0.3em; margin-bottom: 30px; font-weight: 500; color: var(--brand-color); }
+        
+        .status-text { font-size: 13px; margin-bottom: 20px; letter-spacing: 0.1em; opacity: 0.8; }
+        
+        /* 內容區塊 */
+        .points-box { background: #f4f4f4; padding: 35px 30px; margin: 25px 0; border-radius: 8px; }
+        .points-label { font-size: 12px; margin-bottom: 8px; letter-spacing: 0.2em; color: #888; }
+        .points-num { font-size: 60px; font-weight: bold; line-height: 1; }
+        
+        .btn { background: var(--brand-color); color: white; border: none; padding: 18px; width: 100%; font-size: 15px; letter-spacing: 0.2em; cursor: pointer; transition: 0.3s; margin-top: 15px; font-weight: bold; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
         #qrcode-canvas { background: white; padding: 15px; display: inline-block; margin: 20px 0; border: 1px solid #eee; }
-        .footer { margin-top: 40px; font-size: 11px; opacity: 0.5; }
+        .instruction { font-size: 13px; color: #777; margin-bottom: 25px; letter-spacing: 0.05em; }
+        
+        /* 頁尾 */
+        .footer { margin-top: 50px; font-size: 12px; letter-spacing: 0.15em; opacity: 0.7; font-weight: 400; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <img src="https://raw.githubusercontent.com/orlifehr/orlifehr-lineliff/main/logo.png" class="brand-logo">
-    <div id="status" style="font-size: 14px; margin-bottom: 10px;">連線中...</div>
+    <div class="brand-slogan">讓夥伴發光</div>
+    
+    <div id="status" class="status-text">連線中...</div>
 
     <div id="main-content" style="display:none;">
         <div id="user-ui">
             <div class="points-box">
+                <div class="points-label">累計勳章數量</div>
                 <div id="points-display" class="points-num">--</div>
-                <div style="font-size: 13px; margin-top: 10px; letter-spacing: 2px;">累計勳章數量</div>
             </div>
             <div id="qrcode-canvas"></div>
-            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">請向HR出示此碼取得勳章</p>
+            <p class="instruction">請向HR出示此碼取得勳章</p>
             <button id="redeemBtn" class="btn" style="background:#8b0000; display:none;">前往兌換獎勵</button>
-            <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal;">關閉視窗</button>
+            <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal; text-decoration: underline;">關閉視窗</button>
         </div>
 
         <div id="staff-ui" style="display:none;">
             <div class="points-box" style="background: #eef2ee;">
-                <p style="margin:0; font-size: 14px;">授予勳章模式</p>
-                <h2 id="target-user-name" style="margin: 15px 0;">---</h2>
+                <p style="margin:0; font-size: 13px; letter-spacing: 0.1em;">授予勳章模式</p>
+                <h2 id="target-user-name" style="margin: 15px 0; letter-spacing: 0.05em;">---</h2>
                 <p style="font-size: 13px; color: #666;">確認為該同仁增加 1 枚勳章？</p>
             </div>
             <button id="staffAddBtn" class="btn">確認授予</button>
-            <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999;">取消退出</button>
+            <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal;">取消退出</button>
         </div>
     </div>
-    <div class="footer">讓夥伴發光 - 或者 OR</div>
+    
+    <div class="footer">讓在地人驕傲 旅行者憧憬 — 或者</div>
 </div>
 
 <script>
@@ -66,7 +82,6 @@
             document.getElementById('main-content').style.display = 'block';
 
             if (act === 'staff_add') {
-                // 店員模式
                 document.getElementById('user-ui').style.display = 'none';
                 document.getElementById('staff-ui').style.display = 'block';
                 document.getElementById('target-user-name').innerText = params.get('name');
@@ -77,7 +92,6 @@
                     btn.innerText = "驗證權限中...";
 
                     try {
-                        // 使用 POST 發送並等待 GAS 回傳結果
                         const response = await fetch(SCRIPT_URL, {
                             method: 'POST',
                             body: JSON.stringify({
@@ -100,13 +114,12 @@
                             alert("系統異常，請聯絡HR");
                         }
                     } catch (err) {
-                        alert("通訊完成，請檢查勳章狀況。\n(若您非授權之HR，此操作將無效)");
+                        alert("通訊完成，請檢查勳章狀況。");
                         liff.closeWindow();
                     }
                 };
 
             } else {
-                // 會員模式
                 const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId);
                 const pts = parseInt(await res.text()) || 0;
                 document.getElementById('points-display').innerText = pts;
