@@ -15,9 +15,8 @@
         .points-num { font-size: 56px; font-weight: bold; line-height: 1; }
         .btn { background: var(--brand-color); color: white; border: none; padding: 16px; width: 100%; font-size: 16px; letter-spacing: 2px; cursor: pointer; transition: 0.3s; margin-top: 12px; font-weight: bold; }
         .btn:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-redeem { background: #8b0000; }
         #qrcode-canvas { background: white; padding: 15px; display: inline-block; margin: 20px 0; border: 1px solid #eee; }
-        .footer { margin-top: 40px; font-size: 11px; opacity: 0.5; letter-spacing: 1px; }
+        .footer { margin-top: 40px; font-size: 11px; opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -27,17 +26,14 @@
     <div id="status" style="font-size: 14px; margin-bottom: 10px;">連線中...</div>
 
     <div id="main-content" style="display:none;">
-        
         <div id="user-ui">
             <div class="points-box">
                 <div id="points-display" class="points-num">--</div>
                 <div style="font-size: 13px; margin-top: 10px; letter-spacing: 2px;">累計勳章數量</div>
             </div>
-            
             <div id="qrcode-canvas"></div>
             <p style="font-size: 13px; color: #666; margin-bottom: 20px;">集點請向店員出示此碼</p>
-            
-            <button id="redeemBtn" class="btn btn-redeem" style="display:none;">前往兌換獎勵</button>
+            <button id="redeemBtn" class="btn" style="background:#8b0000; display:none;">前往兌換獎勵</button>
             <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal;">關閉視窗</button>
         </div>
 
@@ -50,9 +46,7 @@
             <button id="staffAddBtn" class="btn">確認加點</button>
             <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999;">取消退出</button>
         </div>
-
     </div>
-
     <div class="footer">讓夥伴發光 - 或者 OR</div>
 </div>
 
@@ -65,7 +59,6 @@
             await liff.init({ liffId: LIFF_ID });
             if (!liff.isLoggedIn()) { liff.login(); return; }
             const profile = await liff.getProfile();
-            
             const params = new URLSearchParams(window.location.search);
             const act = params.get('act');
             
@@ -73,70 +66,76 @@
             document.getElementById('main-content').style.display = 'block';
 
             if (act === 'staff_add') {
-                // 進入【店員掃碼模式】
-                const targetUid = params.get('uid');
-                const targetName = params.get('name');
+                // 店員模式
                 document.getElementById('user-ui').style.display = 'none';
                 document.getElementById('staff-ui').style.display = 'block';
-                document.getElementById('target-user-name').innerText = targetName;
+                document.getElementById('target-user-name').innerText = params.get('name');
 
                 document.getElementById('staffAddBtn').onclick = async () => {
                     const btn = document.getElementById('staffAddBtn');
                     btn.disabled = true;
-                    btn.innerText = "通訊中...";
-                    
-                    await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify({
-                            action: 'staff_add',
-                            userId: targetUid,
-                            displayName: targetName,
-                            staffId: profile.userId
-                        })
-                    });
-                    alert("加點成功！");
-                    liff.closeWindow();
+                    btn.innerText = "驗證權限中...";
+
+                    try {
+                        // 使用 POST 發送並等待 GAS 回傳結果
+                        const response = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                action: 'staff_add',
+                                userId: params.get('uid'),
+                                displayName: params.get('name'),
+                                staffId: profile.userId
+                            })
+                        });
+                        const result = await response.text();
+
+                        if (result === "SUCCESS") {
+                            alert("✨ 加點成功！");
+                            liff.closeWindow();
+                        } else if (result === "NO_PERMISSION") {
+                            alert("❌ 權限不足：您不是授權店員。");
+                            btn.disabled = false;
+                            btn.innerText = "確認加點";
+                        } else {
+                            alert("系統異常，請聯絡管理員");
+                        }
+                    } catch (err) {
+                        alert("通訊完成，請檢查點數狀況。\n(若您非授權店員，此操作將無效)");
+                        liff.closeWindow();
+                    }
                 };
 
             } else {
-                // 進入【一般會員模式】
+                // 會員模式
                 const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId);
                 const pts = parseInt(await res.text()) || 0;
                 document.getElementById('points-display').innerText = pts;
 
-                // 生成專屬 QR Code
-                const qrUrl = `https://liff.line.me/${LIFF_ID}?act=staff_add&uid=${profile.userId}&name=${encodeURIComponent(profile.displayName)}`;
                 new QRCode(document.getElementById("qrcode-canvas"), {
-                    text: qrUrl,
+                    text: `https://liff.line.me/${LIFF_ID}?act=staff_add&uid=${profile.userId}&name=${encodeURIComponent(profile.displayName)}`,
                     width: 180,
                     height: 180,
-                    colorDark : "#3a4a3a",
-                    correctLevel : QRCode.CorrectLevel.H
+                    colorDark : "#3a4a3a"
                 });
 
                 if (pts >= 10) {
                     document.getElementById('redeemBtn').style.display = 'block';
                     document.getElementById('redeemBtn').onclick = () => {
-                        if(confirm("確定要扣除 10 點兌換嗎？\n請向店員出示兌換成功畫面。")) {
-                            processRedeem(profile);
-                        }
+                        if(confirm("確定要扣除 10 點兌換獎勵嗎？")) processRedeem(profile);
                     };
                 }
             }
-        } catch (e) { document.getElementById('status').innerText = "系統繁忙，請稍後再試"; }
+        } catch (e) { document.getElementById('status').innerText = "系統連線失敗"; }
     }
 
     async function processRedeem(profile) {
         await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
             body: JSON.stringify({ action: 'minus', userId: profile.userId, displayName: profile.displayName })
         });
         alert("兌換成功！");
         location.reload();
     }
-
     init();
 </script>
 </body>
