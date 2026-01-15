@@ -32,18 +32,18 @@
                 <div style="font-size: 13px; margin-top: 10px; letter-spacing: 2px;">累計勳章數量</div>
             </div>
             <div id="qrcode-canvas"></div>
-            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">集點請向店員出示此碼</p>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">集點請向HR出示此碼</p>
             <button id="redeemBtn" class="btn" style="background:#8b0000; display:none;">前往兌換獎勵</button>
             <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal;">關閉視窗</button>
         </div>
 
         <div id="staff-ui" style="display:none;">
             <div class="points-box" style="background: #eef2ee;">
-                <p style="margin:0; font-size: 14px;">店員加點模式</p>
+                <p style="margin:0; font-size: 14px;">授予勳章模式</p>
                 <h2 id="target-user-name" style="margin: 15px 0;">---</h2>
-                <p style="font-size: 13px; color: #666;">確認為該會員增加 1 枚勳章？</p>
+                <p style="font-size: 13px; color: #666;">確認為該同仁增加 1 枚勳章？</p>
             </div>
-            <button id="staffAddBtn" class="btn">確認加點</button>
+            <button id="staffAddBtn" class="btn">確認授予</button>
             <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999;">取消退出</button>
         </div>
     </div>
@@ -90,17 +90,17 @@
                         const result = await response.text();
 
                         if (result === "SUCCESS") {
-                            alert("✨ 加點成功！");
+                            alert("✨ 授予勳章成功！");
                             liff.closeWindow();
                         } else if (result === "NO_PERMISSION") {
-                            alert("❌ 權限不足：您不是授權店員。");
+                            alert("❌ 權限不足：您不是授權之HR。");
                             btn.disabled = false;
-                            btn.innerText = "確認加點";
+                            btn.innerText = "確認授予勳章";
                         } else {
-                            alert("系統異常，請聯絡管理員");
+                            alert("系統異常，請聯絡HR");
                         }
                     } catch (err) {
-                        alert("通訊完成，請檢查點數狀況。\n(若您非授權店員，此操作將無效)");
+                        alert("通訊完成，請檢查勳章狀況。\n(若您非授權之HR，此操作將無效)");
                         liff.closeWindow();
                     }
                 };
@@ -121,7 +121,7 @@
                 if (pts >= 10) {
                     document.getElementById('redeemBtn').style.display = 'block';
                     document.getElementById('redeemBtn').onclick = () => {
-                        if(confirm("確定要扣除 10 點兌換獎勵嗎？")) processRedeem(profile);
+                        if(confirm("確定要扣除 10 枚兌換獎勵嗎？")) processRedeem(profile);
                     };
                 }
             }
