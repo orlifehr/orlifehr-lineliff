@@ -10,7 +10,6 @@
     :root { --brand-color: #3a4a3a; --bg-color: #f9f7f2; }
     body { font-family: "PingFang TC","STHeitiTC-Light","Microsoft JhengHei",sans-serif; background-color: var(--bg-color); color: var(--brand-color); display:flex; justify-content:center; padding:20px; margin:0; -webkit-font-smoothing:antialiased; }
     .container { background:#fff; padding:50px 25px; border-radius:4px; box-shadow:0 10px 30px rgba(0,0,0,0.05); width:100%; max-width:400px; border-top:6px solid var(--brand-color); text-align:center; }
-
     .brand-logo { width:110px; margin:0 auto 15px auto; display:block; }
     .brand-slogan { font-size:16px; letter-spacing:0.3em; margin-bottom:30px; font-weight:500; color:var(--brand-color); }
     .status-text { font-size:13px; margin-bottom:20px; letter-spacing:0.1em; opacity:0.8; }
@@ -21,10 +20,22 @@
 
     .btn { background:var(--brand-color); color:#fff; border:none; padding:18px; width:100%; font-size:15px; letter-spacing:0.2em; cursor:pointer; transition:0.3s; margin-top:15px; font-weight:bold; }
     .btn:disabled { background:#ccc; cursor:not-allowed; }
+    .btn-secondary { background:none; color:#999; font-weight:normal; text-decoration:underline; }
 
     #qrcode-canvas { background:#fff; padding:15px; display:inline-block; margin:20px 0; border:1px solid #eee; }
     .instruction { font-size:13px; color:#777; margin-bottom:25px; letter-spacing:0.05em; }
     .footer { margin-top:50px; font-size:12px; letter-spacing:0.15em; opacity:0.7; font-weight:400; }
+
+    /* 兌獎清單樣式 */
+    .redeem-title { font-size:14px; letter-spacing:0.15em; margin:10px 0 18px 0; opacity:0.9; }
+    .reward-card { background:#fff; border:1px solid #eee; border-radius:10px; padding:14px; text-align:left; margin:12px 0; }
+    .reward-top { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+    .reward-points { font-weight:800; letter-spacing:0.05em; }
+    .reward-badge { font-size:12px; color:#666; background:#eef2ee; padding:4px 8px; border-radius:999px; }
+    .reward-desc { margin:10px 0 0 0; color:#444; font-size:13px; line-height:1.5; }
+    .reward-note { margin:8px 0 0 0; color:#888; font-size:12px; line-height:1.4; }
+    .reward-btn { margin-top:12px; padding:14px; font-size:14px; letter-spacing:0.12em; }
+    .locked { opacity:0.55; }
 
     /* ✅ HR 授予枚數輸入 */
     .grant-row { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:14px; }
@@ -59,20 +70,29 @@
         <div id="points-display" class="points-num">--</div>
       </div>
 
-      <div id="qrcode-canvas"></div>
-      <p class="instruction">請向HR出示此碼取得勳章</p>
+      <div id="qrcode-area">
+        <div id="qrcode-canvas"></div>
+        <p class="instruction">請向HR出示此碼取得勳章</p>
+      </div>
 
-      <!-- 你原本的兌獎按鈕（若你已改成多選兌獎 UI，可忽略/替換） -->
+      <!-- 入口按鈕：點進去顯示兌獎列表 -->
       <button id="redeemBtn" class="btn" style="background:#8b0000; display:none;">前往兌換獎勵</button>
 
-      <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal; text-decoration: underline;">關閉視窗</button>
+      <!-- 兌獎 UI -->
+      <div id="redeem-ui" style="display:none;">
+        <div class="redeem-title">兌換選項</div>
+        <div id="reward-list"></div>
+        <button id="redeemBackBtn" class="btn btn-secondary" style="text-decoration:underline;">返回</button>
+      </div>
+
+      <button onclick="liff.closeWindow()" class="btn btn-secondary">關閉視窗</button>
     </div>
 
-    <!-- ✅ HR 授予模式：新增授予枚數 -->
+    <!-- ✅ HR 授予模式：可輸入授予枚數 -->
     <div id="staff-ui" style="display:none;">
       <div class="points-box" style="background:#eef2ee;">
         <p style="margin:0; font-size:13px; letter-spacing:0.1em;">授予勳章模式</p>
-        <h2 id="target-user-name" style="margin: 15px 0; letter-spacing: 0.05em;">---</h2>
+        <h2 id="target-user-name" style="margin:15px 0; letter-spacing:0.05em;">---</h2>
 
         <div class="grant-row">
           <div class="grant-label">授予枚數</div>
@@ -80,11 +100,11 @@
         </div>
 
         <div id="grantPreview" class="grant-hint">將為該同仁增加 1 枚勳章</div>
-        <div class="grant-hint">（建議一次最多 30 枚，可自行調整上限）</div>
+        <div class="grant-hint">（一次最多 30 枚；後端也會檢查）</div>
       </div>
 
       <button id="staffAddBtn" class="btn">確認授予</button>
-      <button onclick="liff.closeWindow()" class="btn" style="background:none; color:#999; font-weight:normal;">取消退出</button>
+      <button onclick="liff.closeWindow()" class="btn btn-secondary" style="text-decoration:none;">取消退出</button>
     </div>
   </div>
 
@@ -95,12 +115,26 @@
   const LIFF_ID = "2008901106-Au1lEG1Q";
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXuwYOyVmNes71__tI9JvhjTYVGfvWEbbm0Fg_zbc2W00ZVPPi9rFyEDGoGfn27374/exec";
 
+  // 兌獎清單（前端顯示用；實際以後端 REWARD_TABLE 驗證為準）
+  const REWARDS = [
+    { points: 3,  title: "150元內飲品", note: "於合作店家或指定方式兌換" },
+    { points: 6,  title: "500元內書本一本", note: "自選一本（以實付金額為準）" },
+    { points: 9,  title: "700元自我成長相關課程或講座", note: "需與 HR 確認課程/講座內容" },
+    { points: 18, title: "任選1000元內工藝品", note: "以實付金額為準" },
+    { points: 30, title: "平日風旅住宿一晚", note: "限平日，需提前與 HR 預約確認" }
+  ];
+
+  let currentPoints = 0;
+  let currentProfile = null;
+
   async function init() {
     try {
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
 
       const profile = await liff.getProfile();
+      currentProfile = profile;
+
       const params = new URLSearchParams(window.location.search);
       const act = params.get('act');
 
@@ -108,6 +142,7 @@
       document.getElementById('main-content').style.display = 'block';
 
       if (act === 'staff_add') {
+        // HR 授予模式
         document.getElementById('user-ui').style.display = 'none';
         document.getElementById('staff-ui').style.display = 'block';
         document.getElementById('target-user-name').innerText = params.get('name') || "（未命名）";
@@ -119,7 +154,7 @@
           let n = parseInt(v, 10);
           if (!Number.isFinite(n)) n = 1;
           if (n < 1) n = 1;
-          if (n > 30) n = 30; // ✅ 前端上限（後端也會再檢查）
+          if (n > 30) n = 30; // 前端上限（後端也會再檢查）
           return n;
         }
 
@@ -142,12 +177,13 @@
           try {
             const response = await fetch(SCRIPT_URL, {
               method: 'POST',
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: 'staff_add',
                 userId: params.get('uid'),
                 displayName: params.get('name'),
                 staffId: profile.userId,
-                grantCount: n // ✅ 新增：授予枚數
+                grantCount: n
               })
             });
             const result = await response.text();
@@ -175,37 +211,123 @@
         };
 
       } else {
-        const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId);
-        const pts = parseInt(await res.text()) || 0;
-        document.getElementById('points-display').innerText = pts;
-
-        new QRCode(document.getElementById("qrcode-canvas"), {
-          text: `https://liff.line.me/${LIFF_ID}?act=staff_add&uid=${profile.userId}&name=${encodeURIComponent(profile.displayName)}`,
-          width: 180,
-          height: 180,
-          colorDark: "#3a4a3a"
-        });
-
-        // 你原本兌獎顯示條件（若你已改成多選兌獎 UI 請以你新版為主）
-        if (pts >= 10) {
-          document.getElementById('redeemBtn').style.display = 'block';
-          document.getElementById('redeemBtn').onclick = () => {
-            if(confirm("確定要扣除 10 枚兌換獎勵嗎？")) processRedeem(profile);
-          };
-        }
+        // 同仁自助模式
+        await loadPointsAndRender(profile);
       }
+
     } catch (e) {
       document.getElementById('status').innerText = "系統連線失敗";
     }
   }
 
-  async function processRedeem(profile) {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'minus', userId: profile.userId, displayName: profile.displayName })
+  async function loadPointsAndRender(profile) {
+    const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId);
+    const pts = parseInt(await res.text()) || 0;
+    currentPoints = pts;
+    document.getElementById('points-display').innerText = pts;
+
+    // QR
+    document.getElementById("qrcode-canvas").innerHTML = "";
+    new QRCode(document.getElementById("qrcode-canvas"), {
+      text: `https://liff.line.me/${LIFF_ID}?act=staff_add&uid=${profile.userId}&name=${encodeURIComponent(profile.displayName)}`,
+      width: 180,
+      height: 180,
+      colorDark: "#3a4a3a"
     });
-    alert("兌換成功！");
-    location.reload();
+
+    // ✅ 兌獎入口：最低 3 枚即可顯示
+    const redeemBtn = document.getElementById('redeemBtn');
+    if (pts >= 3) {
+      redeemBtn.style.display = 'block';
+      redeemBtn.onclick = () => showRedeemUI();
+    } else {
+      redeemBtn.style.display = 'none';
+    }
+
+    // 返回
+    document.getElementById('redeemBackBtn').onclick = () => hideRedeemUI();
+  }
+
+  function showRedeemUI() {
+    document.getElementById('redeem-ui').style.display = 'block';
+    document.getElementById('qrcode-area').style.display = 'none';
+    document.getElementById('redeemBtn').style.display = 'none';
+    renderRewardList();
+  }
+
+  function hideRedeemUI() {
+    document.getElementById('redeem-ui').style.display = 'none';
+    document.getElementById('qrcode-area').style.display = 'block';
+    if (currentPoints >= 3) document.getElementById('redeemBtn').style.display = 'block';
+  }
+
+  function renderRewardList() {
+    const list = document.getElementById('reward-list');
+    list.innerHTML = "";
+
+    REWARDS.forEach(r => {
+      const canRedeem = currentPoints >= r.points;
+
+      const card = document.createElement("div");
+      card.className = "reward-card" + (canRedeem ? "" : " locked");
+
+      card.innerHTML = `
+        <div class="reward-top">
+          <div class="reward-points">${r.points} 枚</div>
+          <div class="reward-badge">${canRedeem ? "可兌換" : "勳章不足"}</div>
+        </div>
+        <div class="reward-desc">🎁 ${r.title}</div>
+        <div class="reward-note">${r.note}</div>
+      `;
+
+      const btn = document.createElement("button");
+      btn.className = "btn reward-btn";
+      btn.style.background = canRedeem ? "#3a4a3a" : "#ccc";
+      btn.disabled = !canRedeem;
+      btn.innerText = "確認兌換";
+      btn.onclick = () => redeemReward(r.points, r.title);
+
+      card.appendChild(btn);
+      list.appendChild(card);
+    });
+  }
+
+  async function redeemReward(points, title) {
+    if (!confirm(`確定要使用 ${points} 枚勳章兌換「${title}」嗎？`)) return;
+
+    // 避免連點
+    Array.from(document.querySelectorAll(".reward-btn")).forEach(b => b.disabled = true);
+
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: 'redeem',
+          userId: currentProfile.userId,
+          displayName: currentProfile.displayName,
+          redeemPoints: points
+        })
+      });
+      const result = await response.text();
+
+      if (result === "SUCCESS") {
+        alert("🎉 兌換成功！請依規則向 HR 進行領取/核銷。");
+        location.reload();
+      } else if (result === "INSUFFICIENT_POINTS") {
+        alert("勳章不足，無法兌換。");
+        location.reload();
+      } else if (result === "INVALID_REWARD") {
+        alert("兌換項目無效，請更新頁面後再試。");
+        location.reload();
+      } else {
+        alert("系統異常，請聯絡HR");
+        location.reload();
+      }
+    } catch (err) {
+      alert("通訊完成，請檢查兌換紀錄或聯絡 HR。");
+      location.reload();
+    }
   }
 
   init();
