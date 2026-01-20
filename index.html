@@ -26,7 +26,6 @@
     .instruction { font-size:13px; color:#777; margin-bottom:25px; letter-spacing:0.05em; }
     .footer { margin-top:50px; font-size:12px; letter-spacing:0.15em; opacity:0.7; font-weight:400; }
 
-    /* 兌獎清單樣式 */
     .redeem-title { font-size:14px; letter-spacing:0.15em; margin:10px 0 18px 0; opacity:0.9; }
     .reward-card { background:#fff; border:1px solid #eee; border-radius:10px; padding:14px; text-align:left; margin:12px 0; }
     .reward-top { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
@@ -37,7 +36,6 @@
     .reward-btn { margin-top:12px; padding:14px; font-size:14px; letter-spacing:0.12em; }
     .locked { opacity:0.55; }
 
-    /* ✅ HR 授予枚數輸入 */
     .grant-row { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:14px; }
     .grant-label { font-size:13px; color:#666; letter-spacing:0.08em; }
     .grant-input {
@@ -75,10 +73,8 @@
         <p class="instruction">請向HR出示此碼取得勳章</p>
       </div>
 
-      <!-- 入口按鈕：點進去顯示兌獎列表 -->
       <button id="redeemBtn" class="btn" style="background:#8b0000; display:none;">前往兌換獎勵</button>
 
-      <!-- 兌獎 UI -->
       <div id="redeem-ui" style="display:none;">
         <div class="redeem-title">兌換選項</div>
         <div id="reward-list"></div>
@@ -88,7 +84,6 @@
       <button onclick="liff.closeWindow()" class="btn btn-secondary">關閉視窗</button>
     </div>
 
-    <!-- ✅ HR 授予模式：可輸入授予枚數 -->
     <div id="staff-ui" style="display:none;">
       <div class="points-box" style="background:#eef2ee;">
         <p style="margin:0; font-size:13px; letter-spacing:0.1em;">授予勳章模式</p>
@@ -115,7 +110,6 @@
   const LIFF_ID = "2008901106-Au1lEG1Q";
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXuwYOyVmNes71__tI9JvhjTYVGfvWEbbm0Fg_zbc2W00ZVPPi9rFyEDGoGfn27374/exec";
 
-  // 兌獎清單（前端顯示用；實際以後端 REWARD_TABLE 驗證為準）
   const REWARDS = [
     { points: 3,  title: "150元內飲品", note: "於合作店家或指定方式兌換" },
     { points: 6,  title: "500元內書本一本", note: "自選一本（以實付金額為準）" },
@@ -142,7 +136,6 @@
       document.getElementById('main-content').style.display = 'block';
 
       if (act === 'staff_add') {
-        // HR 授予模式
         document.getElementById('user-ui').style.display = 'none';
         document.getElementById('staff-ui').style.display = 'block';
         document.getElementById('target-user-name').innerText = params.get('name') || "（未命名）";
@@ -154,7 +147,7 @@
           let n = parseInt(v, 10);
           if (!Number.isFinite(n)) n = 1;
           if (n < 1) n = 1;
-          if (n > 30) n = 30; // 前端上限（後端也會再檢查）
+          if (n > 30) n = 30;
           return n;
         }
 
@@ -175,9 +168,9 @@
           const n = clampCount(input.value);
 
           try {
+            // ✅ 刪掉 headers，避免 CORS preflight 擋掉
             const response = await fetch(SCRIPT_URL, {
               method: 'POST',
-              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: 'staff_add',
                 userId: params.get('uid'),
@@ -186,6 +179,7 @@
                 grantCount: n
               })
             });
+
             const result = await response.text();
 
             if (result === "SUCCESS") {
@@ -211,7 +205,6 @@
         };
 
       } else {
-        // 同仁自助模式
         await loadPointsAndRender(profile);
       }
 
@@ -221,12 +214,12 @@
   }
 
   async function loadPointsAndRender(profile) {
-    const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId);
+    // ✅ 加 timestamp 避免快取
+    const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId + "&t=" + Date.now());
     const pts = parseInt(await res.text()) || 0;
     currentPoints = pts;
     document.getElementById('points-display').innerText = pts;
 
-    // QR
     document.getElementById("qrcode-canvas").innerHTML = "";
     new QRCode(document.getElementById("qrcode-canvas"), {
       text: `https://liff.line.me/${LIFF_ID}?act=staff_add&uid=${profile.userId}&name=${encodeURIComponent(profile.displayName)}`,
@@ -235,7 +228,6 @@
       colorDark: "#3a4a3a"
     });
 
-    // ✅ 兌獎入口：最低 3 枚即可顯示
     const redeemBtn = document.getElementById('redeemBtn');
     if (pts >= 3) {
       redeemBtn.style.display = 'block';
@@ -244,7 +236,6 @@
       redeemBtn.style.display = 'none';
     }
 
-    // 返回
     document.getElementById('redeemBackBtn').onclick = () => hideRedeemUI();
   }
 
@@ -295,13 +286,12 @@
   async function redeemReward(points, title) {
     if (!confirm(`確定要使用 ${points} 枚勳章兌換「${title}」嗎？`)) return;
 
-    // 避免連點
     Array.from(document.querySelectorAll(".reward-btn")).forEach(b => b.disabled = true);
 
     try {
+      // ✅ 刪掉 headers，避免 CORS preflight 擋掉
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: 'redeem',
           userId: currentProfile.userId,
@@ -309,6 +299,7 @@
           redeemPoints: points
         })
       });
+
       const result = await response.text();
 
       if (result === "SUCCESS") {
@@ -325,7 +316,7 @@
         location.reload();
       }
     } catch (err) {
-      alert("通訊完成，請檢查兌換紀錄或聯絡 HR。");
+      alert("通訊失敗，請稍後再試或聯絡 HR。");
       location.reload();
     }
   }
