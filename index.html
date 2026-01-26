@@ -279,7 +279,7 @@
   function hideRedeemUI() {
     document.getElementById('redeem-ui').style.display = 'none';
     document.getElementById('qrcode-area').style.display = 'block';
-    if (currentPoints >= getMinRewardPoints()) document.getElementById('redeemBtn').style.display = 'block';
+    document.getElementById('redeemBtn').style.display = 'block'; // ✅ 永遠顯示
   }
 
   function renderRewardList() {
