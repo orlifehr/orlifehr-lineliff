@@ -262,14 +262,9 @@
     });
 
     const redeemBtn = document.getElementById('redeemBtn');
-    const minPts = getMinRewardPoints();
-
-    if (pts >= minPts) {
-      redeemBtn.style.display = 'block';
-      redeemBtn.onclick = () => showRedeemUI();
-    } else {
-      redeemBtn.style.display = 'none';
-    }
+    // ✅ 永遠顯示「前往兌換獎勵」
+    redeemBtn.style.display = 'block';
+    redeemBtn.onclick = () => showRedeemUI();
 
     document.getElementById('redeemBackBtn').onclick = () => hideRedeemUI();
   }
