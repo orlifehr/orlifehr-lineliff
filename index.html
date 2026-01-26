@@ -108,18 +108,48 @@
 
 <script>
   const LIFF_ID = "2008901106-Au1lEG1Q";
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXuwYOyVmNes71__tI9JvhjTYVGfvWEbbm0Fg_zbc2W00ZVPPi9rFyEDGoGfn27374/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzljDucaY1cVwYbPF2NFlOKsUvHMG1i5dRlOHNzc6Ugk2F0lVOE4_e9JjWU-MjrZv8U/exec";
 
-  const REWARDS = [
-    { points: 3,  title: "150元內飲品", note: "於合作店家或指定方式兌換" },
-    { points: 6,  title: "500元內書本一本", note: "自選一本（以實付金額為準）" },
-    { points: 9,  title: "700元自我成長相關課程或講座", note: "需與 HR 確認課程/講座內容" },
-    { points: 18, title: "任選1000元內工藝品", note: "以實付金額為準" },
-    { points: 30, title: "平日風旅住宿一晚", note: "限平日，需提前與 HR 預約確認" }
+  // ✅ 後備預設：如果後端/兌獎表取不到，UI 仍可運作（不影響風格）
+  const DEFAULT_REWARDS = [
+    { points: 3,  title: "150元內飲品", note: "於合作店家或指定方式兌換", enabled: true, sort: 1 },
+    { points: 6,  title: "500元內書本一本", note: "自選一本（以實付金額為準）", enabled: true, sort: 2 },
+    { points: 9,  title: "700元自我成長相關課程或講座", note: "需與 HR 確認課程/講座內容", enabled: true, sort: 3 },
+    { points: 18, title: "任選1000元內工藝品", note: "以實付金額為準", enabled: true, sort: 4 },
+    { points: 30, title: "平日風旅住宿一晚", note: "限平日，需提前與 HR 預約確認", enabled: true, sort: 5 }
   ];
+
+  let REWARDS = DEFAULT_REWARDS.slice();
 
   let currentPoints = 0;
   let currentProfile = null;
+
+  async function fetchRewards() {
+    try {
+      const res = await fetch(SCRIPT_URL + "?action=rewards&t=" + Date.now());
+      const arr = await res.json();
+      if (Array.isArray(arr) && arr.length > 0) {
+        // 正規化欄位（避免 sheet 不小心輸入成字串）
+        REWARDS = arr.map(r => ({
+          points: parseInt(r.points, 10) || 0,
+          title: String(r.title || ""),
+          note: String(r.note || ""),
+          enabled: true
+        })).filter(r => r.points > 0 && r.title);
+      } else {
+        REWARDS = DEFAULT_REWARDS.slice();
+      }
+    } catch (e) {
+      REWARDS = DEFAULT_REWARDS.slice();
+    }
+  }
+
+  function getMinRewardPoints() {
+    if (!REWARDS || REWARDS.length === 0) return Infinity;
+    let min = Infinity;
+    REWARDS.forEach(r => { if (r.points < min) min = r.points; });
+    return min;
+  }
 
   async function init() {
     try {
@@ -214,6 +244,9 @@
   }
 
   async function loadPointsAndRender(profile) {
+    // 先抓兌獎表（讓 UI 永遠跟 Sheet 同步）
+    await fetchRewards();
+
     // ✅ 加 timestamp 避免快取
     const res = await fetch(SCRIPT_URL + "?uid=" + profile.userId + "&t=" + Date.now());
     const pts = parseInt(await res.text()) || 0;
@@ -229,7 +262,9 @@
     });
 
     const redeemBtn = document.getElementById('redeemBtn');
-    if (pts >= 3) {
+    const minPts = getMinRewardPoints();
+
+    if (pts >= minPts) {
       redeemBtn.style.display = 'block';
       redeemBtn.onclick = () => showRedeemUI();
     } else {
@@ -249,7 +284,7 @@
   function hideRedeemUI() {
     document.getElementById('redeem-ui').style.display = 'none';
     document.getElementById('qrcode-area').style.display = 'block';
-    if (currentPoints >= 3) document.getElementById('redeemBtn').style.display = 'block';
+    if (currentPoints >= getMinRewardPoints()) document.getElementById('redeemBtn').style.display = 'block';
   }
 
   function renderRewardList() {
@@ -268,7 +303,7 @@
           <div class="reward-badge">${canRedeem ? "可兌換" : "勳章不足"}</div>
         </div>
         <div class="reward-desc">🎁 ${r.title}</div>
-        <div class="reward-note">${r.note}</div>
+        <div class="reward-note">${r.note || ""}</div>
       `;
 
       const btn = document.createElement("button");
